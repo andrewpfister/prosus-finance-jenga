@@ -398,11 +398,28 @@ function initFirebase(cfg) {
   const ref = DB.ref('tournament/state');
   let firstLoad = true;
 
+  // Timeout: show error if Firebase doesn't respond in 10 seconds
+  const timeout = setTimeout(() => {
+    if (firstLoad) {
+      document.getElementById('loading-overlay').innerHTML =
+        '<div style="color:#EF4444;font-size:.95rem;text-align:center;padding:20px;max-width:400px">' +
+        '<div style="font-size:2rem;margin-bottom:12px">⚠️</div>' +
+        '<strong>Could not connect to Firebase.</strong><br><br>' +
+        'Check that your Realtime Database rules allow read/write access:<br><br>' +
+        '<code style="background:rgba(255,255,255,.1);padding:4px 8px;border-radius:4px;font-size:.8rem">' +
+        '{ "rules": { ".read": true, ".write": true } }' +
+        '</code><br><br>' +
+        '<span style="color:#8AAAD4;font-size:.85rem">Firebase Console → Realtime Database → Rules → Publish</span>' +
+        '</div>';
+    }
+  }, 10000);
+
   ref.on('value', snapshot => {
     const data = snapshot.val();
 
     if (firstLoad) {
       firstLoad = false;
+      clearTimeout(timeout);
       document.getElementById('loading-overlay').style.display = 'none';
       if (data) S = { players:[], matches:[], started:false, nextPid:1, nextMid:1, ...data };
       renderAll();
