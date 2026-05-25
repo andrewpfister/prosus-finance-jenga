@@ -229,27 +229,6 @@
   <div class="loading-txt">Connecting to live scoreboard…</div>
 </div>
 
-<!-- ═══ FIREBASE SETUP ═══ -->
-<div id="setup-overlay" style="display:none">
-  <div class="setup-box">
-    <h2>🔧 One-time Firebase Setup</h2>
-    <p>To enable a live shared scoreboard, connect a free Firebase Realtime Database. This takes about 3 minutes and only needs to be done once.</p>
-    <ol class="setup-steps">
-      <li><span class="step-num">1</span><span>Go to <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> and click <strong>Add project</strong>. Name it <code>prosus-finance-jenga</code>.</span></li>
-      <li><span class="step-num">2</span><span>In the project, click the Web icon <strong>&lt;/&gt;</strong> to add a web app. Copy the <code>firebaseConfig</code> object shown.</span></li>
-      <li><span class="step-num">3</span><span>Go to <strong>Build → Realtime Database → Create database</strong>. Choose <em>Start in test mode</em>. Copy the database URL.</span></li>
-      <li><span class="step-num">4</span><span>Paste your config values below, then click <strong>Save &amp; Connect</strong>.</span></li>
-    </ol>
-    <div class="setup-input-grid">
-      <div class="setup-field full"><label>Database URL</label><input id="cfg-dburl" placeholder="https://your-project-default-rtdb.firebaseio.com"></div>
-      <div class="setup-field full"><label>API Key</label><input id="cfg-apikey" placeholder="AIzaSy..."></div>
-      <div class="setup-field"><label>Project ID</label><input id="cfg-projectid" placeholder="your-project-id"></div>
-      <div class="setup-field"><label>App ID</label><input id="cfg-appid" placeholder="1:123456:web:abc..."></div>
-    </div>
-    <div class="setup-error" id="setup-error"></div>
-    <button class="btn btn-primary btn-block" onclick="saveConfig()">Save &amp; Connect</button>
-  </div>
-</div>
 
 <header>
   <div class="hdr-left">
@@ -388,35 +367,15 @@
 
 <script>
 // ─── Firebase Config ──────────────────────────────────────────────────────
-// Stored in localStorage after first-time setup
-function getConfig() {
-  try { return JSON.parse(localStorage.getItem('jenga-fb-config')); } catch(_){ return null; }
-}
-function setConfig(cfg) { localStorage.setItem('jenga-fb-config', JSON.stringify(cfg)); }
-
-// ─── Config setup UI ──────────────────────────────────────────────────────
-function saveConfig() {
-  const cfg = {
-    databaseURL:      document.getElementById('cfg-dburl').value.trim(),
-    apiKey:           document.getElementById('cfg-apikey').value.trim(),
-    projectId:        document.getElementById('cfg-projectid').value.trim(),
-    appId:            document.getElementById('cfg-appid').value.trim(),
-    authDomain:       '',
-    storageBucket:    '',
-    messagingSenderId:''
-  };
-  const err = document.getElementById('setup-error');
-  if (!cfg.databaseURL || !cfg.apiKey || !cfg.projectId || !cfg.appId) {
-    err.style.display = 'block'; err.textContent = 'Please fill in all fields.'; return;
-  }
-  if (!cfg.databaseURL.startsWith('https://')) {
-    err.style.display = 'block'; err.textContent = 'Database URL must start with https://'; return;
-  }
-  err.style.display = 'none';
-  setConfig(cfg);
-  document.getElementById('setup-overlay').style.display = 'none';
-  initFirebase(cfg);
-}
+const FIREBASE_CFG = {
+  apiKey:            "AIzaSyBCSfRnfH_zxBbmnA6qU-7QxK9Oml-T4V4",
+  authDomain:        "prosus-finance-jenga.firebaseapp.com",
+  databaseURL:       "https://prosus-finance-jenga-default-rtdb.firebaseio.com",
+  projectId:         "prosus-finance-jenga",
+  storageBucket:     "prosus-finance-jenga.firebasestorage.app",
+  messagingSenderId: "712554190064",
+  appId:             "1:712554190064:web:9234ff705eb9f54b9c1e35"
+};
 
 // ─── State ────────────────────────────────────────────────────────────────
 let S = { players:[], matches:[], started:false, nextPid:1, nextMid:1 };
@@ -474,13 +433,7 @@ function save() {
 
 // ─── Boot ─────────────────────────────────────────────────────────────────
 (function boot() {
-  const cfg = getConfig();
-  if (cfg) {
-    initFirebase(cfg);
-  } else {
-    document.getElementById('loading-overlay').style.display = 'none';
-    document.getElementById('setup-overlay').style.display  = 'flex';
-  }
+  initFirebase(FIREBASE_CFG);
 })();
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────
