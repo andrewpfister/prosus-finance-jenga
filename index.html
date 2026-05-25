@@ -538,8 +538,14 @@ function submitApproval(mid) {
   save(); rerenderCard(mid); renderLeaderboard(); updateBadge();
 }
 function rejectResult(mid) {
+  const m = S.matches.find(x=>x.id===mid);
+  if (m.result?.status === 'confirmed') {
+    const pwd = prompt('Enter the admin password to reject an approved result:');
+    if (pwd === null) return;
+    if (pwd !== 'Jeng@2026') { alert('Incorrect password. Rejection cancelled.'); return; }
+  }
   if (!confirm('Reject this result and reset the match?')) return;
-  S.matches.find(x=>x.id===mid).result=null; delete ES[mid];
+  m.result=null; delete ES[mid];
   save(); rerenderCard(mid); renderLeaderboard(); updateBadge();
 }
 
