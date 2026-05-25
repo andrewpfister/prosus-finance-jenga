@@ -503,7 +503,10 @@ function startTournament() {
   save(); renderAll();
 }
 function resetTournament() {
-  if (!confirm('Reset the championship? All results will be cleared.')) return;
+  const pwd = prompt('Enter the admin password to reset the championship:');
+  if (pwd === null) return;
+  if (pwd !== 'Jeng@2026') { alert('Incorrect password. Reset cancelled.'); return; }
+  if (!confirm('Password accepted. Reset the championship? All results will be cleared.')) return;
   S.matches=[]; S.started=false; ES={};
   save(); renderAll();
 }
