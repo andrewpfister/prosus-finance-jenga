@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Finance Jenga Championship · Prosus</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -30,32 +32,76 @@
 
     body { font-family:'Segoe UI',system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
 
+    /* ── Loading overlay ── */
+    #loading-overlay {
+      position:fixed; inset:0; background:var(--bg);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      z-index:1000; gap:16px;
+    }
+    .spinner {
+      width:40px; height:40px; border:3px solid var(--border);
+      border-top-color:var(--teal); border-radius:50%; animation:spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .loading-txt { color:var(--text2); font-size:.9rem; }
+
+    /* ── Setup overlay ── */
+    #setup-overlay {
+      position:fixed; inset:0; background:rgba(8,14,42,.97);
+      display:flex; align-items:center; justify-content:center;
+      z-index:999; padding:20px;
+    }
+    .setup-box {
+      background:var(--card); border:1px solid var(--border); border-radius:16px;
+      padding:32px; max-width:580px; width:100%;
+      box-shadow:0 8px 40px rgba(0,0,0,.5);
+    }
+    .setup-box h2 { font-size:1.2rem; margin-bottom:6px; color:var(--teal); }
+    .setup-box p  { font-size:.88rem; color:var(--text2); margin-bottom:20px; line-height:1.6; }
+    .setup-steps  { list-style:none; display:flex; flex-direction:column; gap:10px; margin-bottom:24px; }
+    .setup-steps li {
+      display:flex; gap:10px; align-items:flex-start;
+      font-size:.85rem; color:var(--text2); line-height:1.5;
+    }
+    .step-num {
+      background:var(--teal); color:#060C24; border-radius:50%;
+      width:22px; height:22px; display:flex; align-items:center; justify-content:center;
+      font-size:.75rem; font-weight:700; flex-shrink:0; margin-top:1px;
+    }
+    .setup-steps a  { color:var(--teal); }
+    .setup-steps code { background:rgba(42,201,188,.15); padding:1px 6px; border-radius:4px; font-size:.82rem; color:var(--teal); }
+    .setup-input-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+    .setup-field label { display:block; font-size:.72rem; color:var(--text2); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+    .setup-field input {
+      width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px;
+      font-size:.82rem; color:var(--text); background:var(--surface);
+    }
+    .setup-field input:focus { outline:none; border-color:var(--teal); }
+    .setup-field.full { grid-column:1/-1; }
+    .setup-error { color:var(--loss); font-size:.8rem; margin-bottom:10px; display:none; }
+
     /* ── Header ── */
     header {
-      background:#060C24;
-      border-bottom:3px solid var(--teal);
-      padding:0 24px;
-      display:flex; align-items:center; justify-content:space-between;
-      height:64px;
-      box-shadow:0 2px 16px rgba(0,0,0,.5);
+      background:#060C24; border-bottom:3px solid var(--teal);
+      padding:0 24px; display:flex; align-items:center; justify-content:space-between;
+      height:68px; box-shadow:0 2px 16px rgba(0,0,0,.5);
     }
     .hdr-left { display:flex; align-items:center; gap:12px; }
-    .hdr-icon {
-      width:44px; height:44px; border-radius:10px; overflow:hidden;
-      display:flex; align-items:center; justify-content:center; flex-shrink:0;
-    }
+    .hdr-icon { width:44px; height:44px; border-radius:10px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
     .hdr-titles { display:flex; flex-direction:column; gap:1px; }
-    header h1   { font-size:1.15rem; font-weight:700; color:#FFF; letter-spacing:-.2px; }
-    .hdr-sub    { font-size:.7rem; color:var(--text2); letter-spacing:.4px; text-transform:uppercase; }
-    .hdr-tagline{ font-size:.68rem; color:var(--gold); letter-spacing:.3px; font-style:italic; }
-    .hdr-badge  { font-size:.7rem; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:var(--gold); border:1px solid rgba(212,152,12,.5); border-radius:4px; padding:3px 9px; }
+    header h1    { font-size:1.15rem; font-weight:700; color:#FFF; letter-spacing:-.2px; }
+    .hdr-sub     { font-size:.7rem; color:var(--text2); letter-spacing:.4px; text-transform:uppercase; }
+    .hdr-tagline { font-size:.68rem; color:var(--gold); letter-spacing:.3px; font-style:italic; }
+    .hdr-badge   { font-size:.7rem; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:var(--gold); border:1px solid rgba(212,152,12,.5); border-radius:4px; padding:3px 9px; }
+    .live-dot    { display:inline-block; width:7px; height:7px; background:var(--win); border-radius:50%; margin-right:5px; animation:pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
     /* ── Nav ── */
     nav { background:var(--surface); border-bottom:1px solid var(--border); display:flex; padding:0 16px; }
     .tab-btn { padding:11px 18px; border:none; background:none; cursor:pointer; font-size:.87rem; font-weight:600; color:var(--muted); border-bottom:3px solid transparent; margin-bottom:-1px; transition:color .15s; }
     .tab-btn:hover { color:var(--text2); }
     .tab-btn.active { color:var(--teal); border-bottom-color:var(--teal); }
-    .badge { display:inline-block; background:var(--gold); color:#080E2A; border-radius:10px; padding:1px 6px; font-size:.7rem; font-weight:700; margin-left:5px; vertical-align:middle; }
+    .badge { display:inline-block; background:var(--gold); color:#060C24; border-radius:10px; padding:1px 6px; font-size:.7rem; font-weight:700; margin-left:5px; vertical-align:middle; }
 
     /* ── Layout ── */
     main { max-width:780px; margin:0 auto; padding:22px 16px 48px; }
@@ -86,6 +132,13 @@
     }
     input[type="text"]::placeholder { color:var(--muted); }
     input[type="text"]:focus { outline:none; border-color:var(--teal); }
+
+    /* ── Search row ── */
+    .search-row { display:flex; align-items:center; gap:8px; }
+    .search-row input { flex:1; min-width:80px; }
+    .vs-sep { color:var(--muted); font-weight:700; font-size:.8rem; white-space:nowrap; }
+    .filter-info { font-size:.78rem; color:var(--text2); margin-top:8px; }
+    .filter-info strong { color:var(--teal); }
 
     /* ── Player list ── */
     .player-list { display:flex; flex-direction:column; gap:7px; }
@@ -119,30 +172,24 @@
     .mp.won  { color:var(--teal); }
     .vs-lbl  { color:var(--muted); font-weight:600; font-size:.8rem; white-space:nowrap; }
 
-    /* result selection buttons */
     .result-btns { display:flex; gap:7px; }
-    .rbtn {
-      flex:1; padding:7px 4px; border:1px solid var(--border); border-radius:7px;
-      background:var(--surface); cursor:pointer; font-size:.78rem; font-weight:600;
-      color:var(--text2); text-align:center; transition:all .15s;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
+    .rbtn { flex:1; padding:7px 4px; border:1px solid var(--border); border-radius:7px; background:var(--surface); cursor:pointer; font-size:.78rem; font-weight:600; color:var(--text2); text-align:center; transition:all .15s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .rbtn:hover    { border-color:var(--teal); color:var(--teal); }
     .rbtn.draw-btn { flex:.65; }
 
-    /* maker-checker states */
-    .result-preview  { font-size:.85rem; font-weight:600; color:var(--text2); margin-bottom:8px; }
-    .result-pending  { font-size:.88rem; font-weight:700; color:var(--gold); margin-bottom:4px; }
+    .result-preview       { font-size:.85rem; font-weight:600; color:var(--text2); margin-bottom:8px; }
+    .result-pending       { font-size:.88rem; font-weight:700; color:var(--gold); margin-bottom:4px; }
     .result-confirmed-lbl { font-size:.88rem; font-weight:700; color:var(--teal); margin-bottom:6px; }
-    .approval-trail  { font-size:.75rem; color:var(--text2); margin-bottom:8px; display:flex; align-items:center; flex-wrap:wrap; gap:4px; }
-    .reject-lnk      { background:none; border:none; cursor:pointer; font-size:.72rem; color:var(--loss); text-decoration:underline; padding:0; margin-left:4px; }
-    .approve-row     { display:flex; gap:8px; margin-top:2px; }
-    .name-input-row  { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-top:2px; }
-    .input-lbl       { font-size:.78rem; color:var(--text2); white-space:nowrap; }
+    .approval-trail       { font-size:.75rem; color:var(--text2); margin-bottom:8px; display:flex; align-items:center; flex-wrap:wrap; gap:4px; }
+    .reject-lnk           { background:none; border:none; cursor:pointer; font-size:.72rem; color:var(--loss); text-decoration:underline; padding:0; margin-left:4px; }
+    .approve-row          { display:flex; gap:8px; margin-top:2px; }
+    .name-input-row       { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-top:2px; }
+    .input-lbl            { font-size:.78rem; color:var(--text2); white-space:nowrap; }
     .name-input-row input[type="text"] { flex:1; min-width:130px; padding:6px 10px; font-size:.85rem; }
 
     /* ── Leaderboard ── */
     .lb-logo-wrap { text-align:center; padding:8px 0 20px; }
+    .lb-pun       { text-align:center; font-style:italic; font-size:.85rem; color:var(--gold); padding:10px 16px 4px; letter-spacing:.2px; }
     .lb-table { width:100%; border-collapse:collapse; }
     .lb-table th { text-align:left; padding:7px 10px; font-size:.72rem; text-transform:uppercase; letter-spacing:.6px; color:var(--text2); border-bottom:1px solid var(--border); }
     .lb-table th:not(:nth-child(1)):not(:nth-child(2)) { text-align:center; }
@@ -157,7 +204,6 @@
     .d-cell    { color:var(--draw-c);font-weight:600; }
     .l-cell    { color:var(--loss);  font-weight:600; }
     .legend    { font-size:.78rem; color:var(--text2); text-align:center; padding:10px; }
-    .lb-pun    { text-align:center; font-style:italic; font-size:.85rem; color:var(--gold); padding:10px 16px 4px; letter-spacing:.2px; }
 
     /* ── Empty state ── */
     .empty { text-align:center; padding:36px 20px; color:var(--text2); }
@@ -167,25 +213,51 @@
     footer { text-align:center; padding:14px; font-size:.72rem; color:var(--muted); border-top:1px solid var(--border); letter-spacing:.3px; }
 
     @media(max-width:480px){
-      header h1 { font-size:1rem; }
+      header h1  { font-size:1rem; }
       .hdr-badge { display:none; }
       .tab-btn   { padding:10px 11px; font-size:.8rem; }
       .rbtn      { font-size:.72rem; padding:6px 3px; }
+      .search-row{ flex-wrap:wrap; }
     }
   </style>
 </head>
 <body>
+
+<!-- ═══ LOADING ═══ -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-txt">Connecting to live scoreboard…</div>
+</div>
+
+<!-- ═══ FIREBASE SETUP ═══ -->
+<div id="setup-overlay" style="display:none">
+  <div class="setup-box">
+    <h2>🔧 One-time Firebase Setup</h2>
+    <p>To enable a live shared scoreboard, connect a free Firebase Realtime Database. This takes about 3 minutes and only needs to be done once.</p>
+    <ol class="setup-steps">
+      <li><span class="step-num">1</span><span>Go to <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> and click <strong>Add project</strong>. Name it <code>prosus-finance-jenga</code>.</span></li>
+      <li><span class="step-num">2</span><span>In the project, click the Web icon <strong>&lt;/&gt;</strong> to add a web app. Copy the <code>firebaseConfig</code> object shown.</span></li>
+      <li><span class="step-num">3</span><span>Go to <strong>Build → Realtime Database → Create database</strong>. Choose <em>Start in test mode</em>. Copy the database URL.</span></li>
+      <li><span class="step-num">4</span><span>Paste your config values below, then click <strong>Save &amp; Connect</strong>.</span></li>
+    </ol>
+    <div class="setup-input-grid">
+      <div class="setup-field full"><label>Database URL</label><input id="cfg-dburl" placeholder="https://your-project-default-rtdb.firebaseio.com"></div>
+      <div class="setup-field full"><label>API Key</label><input id="cfg-apikey" placeholder="AIzaSy..."></div>
+      <div class="setup-field"><label>Project ID</label><input id="cfg-projectid" placeholder="your-project-id"></div>
+      <div class="setup-field"><label>App ID</label><input id="cfg-appid" placeholder="1:123456:web:abc..."></div>
+    </div>
+    <div class="setup-error" id="setup-error"></div>
+    <button class="btn btn-primary btn-block" onclick="saveConfig()">Save &amp; Connect</button>
+  </div>
+</div>
 
 <header>
   <div class="hdr-left">
     <div class="hdr-icon">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="44" height="44">
         <circle cx="40" cy="40" r="40" fill="#162878"/>
-        <polygon points="40,12 63,25.5 63,52.5 40,66 17,52.5 17,25.5"
-                 fill="none" stroke="#2AC9BC" stroke-width="2.8" stroke-linejoin="round"/>
-        <polygon points="40,18 58.5,28.7 58.5,50 40,60.7 21.5,50 21.5,28.7"
-                 fill="none" stroke="#D4980C" stroke-width="2.2" stroke-linejoin="round"
-                 transform="rotate(20,40,40)"/>
+        <polygon points="40,12 63,25.5 63,52.5 40,66 17,52.5 17,25.5" fill="none" stroke="#2AC9BC" stroke-width="2.8" stroke-linejoin="round"/>
+        <polygon points="40,18 58.5,28.7 58.5,50 40,60.7 21.5,50 21.5,28.7" fill="none" stroke="#D4980C" stroke-width="2.2" stroke-linejoin="round" transform="rotate(20,40,40)"/>
         <rect x="22" y="48" width="7" height="11" fill="#2AC9BC" rx="1"/>
         <rect x="32" y="41" width="7" height="18" fill="#2AC9BC" rx="1"/>
         <rect x="42" y="33" width="7" height="26" fill="#D4980C" rx="1"/>
@@ -200,7 +272,7 @@
       <span class="hdr-tagline">Powering Growth · Enabling Insight</span>
     </div>
   </div>
-  <span class="hdr-badge">Finance Team</span>
+  <span class="hdr-badge"><span class="live-dot"></span>Live</span>
 </header>
 
 <nav>
@@ -242,9 +314,21 @@
       <div class="eico">📅</div>Register competitors and start the championship to see the match schedule.
     </div>
     <div id="matches-wrap" style="display:none">
+      <!-- Progress -->
       <div class="card">
         <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
         <div class="progress-lbl" id="prog-lbl">0 of 0 matches confirmed</div>
+      </div>
+      <!-- Fixture search -->
+      <div class="card">
+        <div class="card-title">Find a Fixture</div>
+        <div class="search-row">
+          <input type="text" id="filter-a" placeholder="Player name…" oninput="updateFilter()" autocomplete="off">
+          <span class="vs-sep">vs</span>
+          <input type="text" id="filter-b" placeholder="Player name…" oninput="updateFilter()" autocomplete="off">
+          <button class="btn btn-ghost btn-sm" onclick="clearFilter()" title="Clear filter">✕</button>
+        </div>
+        <div class="filter-info" id="filter-info" style="display:none"></div>
       </div>
       <div id="champion-banner" style="display:none"></div>
       <div id="matches-list"></div>
@@ -258,34 +342,19 @@
     </div>
     <div id="lb-wrap" style="display:none">
       <div class="lb-logo-wrap">
-        <!-- Prosus Group Finance logo (SVG recreation) -->
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 238" width="160" height="190" aria-label="Prosus Group Finance">
-          <!-- Navy circle -->
           <circle cx="100" cy="90" r="80" fill="#162878"/>
-          <!-- Outer teal hexagon (pointy-top, r=56) -->
-          <polygon points="100,34 148.5,62 148.5,118 100,146 51.5,118 51.5,62"
-                   fill="none" stroke="#2AC9BC" stroke-width="3.5" stroke-linejoin="round"/>
-          <!-- Inner gold hexagon (r=46, rotated 20°) -->
-          <polygon points="100,44 139.8,67 139.8,113 100,136 60.2,113 60.2,67"
-                   fill="none" stroke="#D4980C" stroke-width="2.5" stroke-linejoin="round"
-                   transform="rotate(20,100,90)"/>
-          <!-- Bar 1: short teal -->
+          <polygon points="100,34 148.5,62 148.5,118 100,146 51.5,118 51.5,62" fill="none" stroke="#2AC9BC" stroke-width="3.5" stroke-linejoin="round"/>
+          <polygon points="100,44 139.8,67 139.8,113 100,136 60.2,113 60.2,67" fill="none" stroke="#D4980C" stroke-width="2.5" stroke-linejoin="round" transform="rotate(20,100,90)"/>
           <rect x="68" y="109" width="14" height="21" fill="#2AC9BC" rx="2"/>
-          <!-- Bar 2: medium teal -->
           <rect x="87" y="94" width="14" height="36" fill="#2AC9BC" rx="2"/>
-          <!-- Bar 3: tall gold with arrow tip -->
           <rect x="106" y="80" width="14" height="50" fill="#D4980C" rx="2"/>
           <polygon points="106,80 120,80 113,68" fill="#D4980C"/>
-          <!-- P badge -->
           <circle cx="74" cy="54" r="12" fill="#D4980C"/>
           <text x="74" y="59.5" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="13" font-weight="900" fill="#162878">P</text>
-          <!-- PROSUS wordmark -->
           <text x="100" y="194" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" font-weight="800" fill="#FFFFFF" letter-spacing="4">PROSUS</text>
-          <!-- Gold divider -->
           <line x1="22" y1="202" x2="178" y2="202" stroke="#D4980C" stroke-width="2"/>
-          <!-- GROUP FINANCE -->
           <text x="100" y="218" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" font-weight="700" fill="#2AC9BC" letter-spacing="3">GROUP  FINANCE</text>
-          <!-- Tagline -->
           <text x="100" y="231" text-anchor="middle" font-family="Arial,sans-serif" font-size="7.5" fill="#8AAAD4">Powering Growth · Enabling Insight</text>
         </svg>
       </div>
@@ -318,14 +387,101 @@
 <footer>Prosus Finance Department &nbsp;·&nbsp; Jenga Championship<br><span style="color:var(--gold);font-style:italic">Powering Growth · Enabling Insight</span></footer>
 
 <script>
+// ─── Firebase Config ──────────────────────────────────────────────────────
+// Stored in localStorage after first-time setup
+function getConfig() {
+  try { return JSON.parse(localStorage.getItem('jenga-fb-config')); } catch(_){ return null; }
+}
+function setConfig(cfg) { localStorage.setItem('jenga-fb-config', JSON.stringify(cfg)); }
+
+// ─── Config setup UI ──────────────────────────────────────────────────────
+function saveConfig() {
+  const cfg = {
+    databaseURL:      document.getElementById('cfg-dburl').value.trim(),
+    apiKey:           document.getElementById('cfg-apikey').value.trim(),
+    projectId:        document.getElementById('cfg-projectid').value.trim(),
+    appId:            document.getElementById('cfg-appid').value.trim(),
+    authDomain:       '',
+    storageBucket:    '',
+    messagingSenderId:''
+  };
+  const err = document.getElementById('setup-error');
+  if (!cfg.databaseURL || !cfg.apiKey || !cfg.projectId || !cfg.appId) {
+    err.style.display = 'block'; err.textContent = 'Please fill in all fields.'; return;
+  }
+  if (!cfg.databaseURL.startsWith('https://')) {
+    err.style.display = 'block'; err.textContent = 'Database URL must start with https://'; return;
+  }
+  err.style.display = 'none';
+  setConfig(cfg);
+  document.getElementById('setup-overlay').style.display = 'none';
+  initFirebase(cfg);
+}
+
 // ─── State ────────────────────────────────────────────────────────────────
 let S = { players:[], matches:[], started:false, nextPid:1, nextMid:1 };
-// entryState is in-memory only — tracks which match is mid-entry
-// { [matchId]: { mode:'recorder'|'approver', pendingValue:'p1'|'draw'|'p2' } }
-let ES = {};
+let ES = {};            // in-memory entry state (not synced)
+let filterA = '';
+let filterB = '';
+let _lastWrite = null;  // detect our own echoes
+let DB = null;          // Firebase database reference
 
-function load() { try { const d=localStorage.getItem('jenga-v3'); if(d) S=JSON.parse(d); } catch(_){} }
-function save() { localStorage.setItem('jenga-v3', JSON.stringify(S)); }
+// ─── Firebase init & sync ─────────────────────────────────────────────────
+function initFirebase(cfg) {
+  try {
+    const app = firebase.initializeApp(cfg);
+    DB = firebase.database(app);
+  } catch(e) {
+    // App already initialised (page reload)
+    DB = firebase.database();
+  }
+
+  const ref = DB.ref('tournament/state');
+  let firstLoad = true;
+
+  ref.on('value', snapshot => {
+    const data = snapshot.val();
+
+    if (firstLoad) {
+      firstLoad = false;
+      document.getElementById('loading-overlay').style.display = 'none';
+      if (data) S = { players:[], matches:[], started:false, nextPid:1, nextMid:1, ...data };
+      renderAll();
+      return;
+    }
+
+    // Subsequent updates — ignore our own writes
+    const incoming = JSON.stringify(data);
+    if (incoming === _lastWrite) return;
+
+    if (data) {
+      S = { players:[], matches:[], started:false, nextPid:1, nextMid:1, ...data };
+      // Clear open entry states for matches that changed externally
+      Object.keys(ES).forEach(mid => {
+        const m = S.matches.find(x => x.id == mid);
+        if (!m || m.result) delete ES[mid];
+      });
+    }
+    renderAll();
+  });
+}
+
+function save() {
+  if (!DB) return;
+  _lastWrite = JSON.stringify(S);
+  DB.ref('tournament/state').set(S);
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────
+(function boot() {
+  const cfg = getConfig();
+  if (cfg) {
+    initFirebase(cfg);
+  } else {
+    document.getElementById('loading-overlay').style.display = 'none';
+    document.getElementById('setup-overlay').style.display  = 'flex';
+  }
+})();
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────
 function showTab(id, btn) {
@@ -382,79 +538,85 @@ function resetTournament() {
   save(); renderAll();
 }
 
-// ─── Maker-checker entry ──────────────────────────────────────────────────
-function selectResult(mid, value) {
-  ES[mid] = { mode:'recorder', pendingValue:value };
-  rerenderCard(mid);
-}
-function cancelRecording(mid) { delete ES[mid]; rerenderCard(mid); }
+// ─── Maker-checker ────────────────────────────────────────────────────────
+function selectResult(mid, value) { ES[mid]={mode:'recorder',pendingValue:value}; rerenderCard(mid); }
+function cancelRecording(mid)     { delete ES[mid]; rerenderCard(mid); }
 
 function submitRecorder(mid) {
-  const inp = document.getElementById('rec-inp-'+mid);
-  const name = inp.value.trim();
-  if (!name) { inp.focus(); return; }
-  const m = S.matches.find(x=>x.id===mid);
-  m.result = { value:ES[mid].pendingValue, status:'pending', recorder:name, approver:null };
+  const inp=document.getElementById('rec-inp-'+mid);
+  const name=inp.value.trim(); if (!name){inp.focus();return;}
+  const m=S.matches.find(x=>x.id===mid);
+  m.result={value:ES[mid].pendingValue,status:'pending',recorder:name,approver:null};
   delete ES[mid];
   save(); rerenderCard(mid); renderLeaderboard(); updateBadge();
 }
-
-function startApproval(mid) { ES[mid]={mode:'approver'}; rerenderCard(mid); }
+function startApproval(mid)  { ES[mid]={mode:'approver'}; rerenderCard(mid); }
 function cancelApproval(mid) { delete ES[mid]; rerenderCard(mid); }
 
 function submitApproval(mid) {
-  const inp = document.getElementById('app-inp-'+mid);
-  const name = inp.value.trim();
-  if (!name) { inp.focus(); return; }
-  const m = S.matches.find(x=>x.id===mid);
+  const inp=document.getElementById('app-inp-'+mid);
+  const name=inp.value.trim(); if (!name){inp.focus();return;}
+  const m=S.matches.find(x=>x.id===mid);
   if (name.toLowerCase()===m.result.recorder.toLowerCase()) {
-    inp.style.borderColor='var(--loss)';
-    inp.value=''; inp.placeholder='Must be a different person!';
-    inp.focus(); return;
+    inp.style.borderColor='var(--loss)'; inp.value=''; inp.placeholder='Must be a different person!'; inp.focus(); return;
   }
   m.result.status='confirmed'; m.result.approver=name;
   delete ES[mid];
   save(); rerenderCard(mid); renderLeaderboard(); updateBadge();
 }
-
 function rejectResult(mid) {
   if (!confirm('Reject this result and reset the match?')) return;
-  const m=S.matches.find(x=>x.id===mid);
-  m.result=null; delete ES[mid];
+  S.matches.find(x=>x.id===mid).result=null; delete ES[mid];
   save(); rerenderCard(mid); renderLeaderboard(); updateBadge();
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────
-function resultLabel(m, value) {
-  if (value==='p1') return esc(m.p1.name)+' wins';
-  if (value==='p2') return esc(m.p2.name)+' wins';
-  return 'Draw';
+// ─── Filter ───────────────────────────────────────────────────────────────
+function updateFilter() {
+  filterA = document.getElementById('filter-a')?.value || '';
+  filterB = document.getElementById('filter-b')?.value || '';
+  renderMatches();
 }
-function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function clearFilter() {
+  filterA=''; filterB='';
+  const fa=document.getElementById('filter-a'); if(fa) fa.value='';
+  const fb=document.getElementById('filter-b'); if(fb) fb.value='';
+  renderMatches();
+}
+function applyFilter(matches) {
+  const a=filterA.trim().toLowerCase(), b=filterB.trim().toLowerCase();
+  if (!a && !b) return matches;
+  return matches.filter(m => {
+    const n1=m.p1.name.toLowerCase(), n2=m.p2.name.toLowerCase();
+    if (a && b) return (n1.includes(a)&&n2.includes(b))||(n1.includes(b)&&n2.includes(a));
+    if (a) return n1.includes(a)||n2.includes(a);
+    if (b) return n1.includes(b)||n2.includes(b);
+    return true;
+  });
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+function resultLabel(m,v){ return v==='p1'?esc(m.p1.name)+' wins':v==='p2'?esc(m.p2.name)+' wins':'Draw'; }
+function esc(s){ const d=document.createElement('div');d.textContent=s;return d.innerHTML; }
 
 function rerenderCard(mid) {
-  const old = document.getElementById('mc-'+mid);
-  if (!old) return;
-  const m = S.matches.find(x=>x.id===mid);
-  const tmp = document.createElement('div');
-  tmp.innerHTML = matchHtml(m);
+  const old=document.getElementById('mc-'+mid); if (!old) return;
+  const m=S.matches.find(x=>x.id===mid);
+  const tmp=document.createElement('div'); tmp.innerHTML=matchHtml(m);
   old.replaceWith(tmp.firstElementChild);
-  const inp = document.getElementById('rec-inp-'+mid)||document.getElementById('app-inp-'+mid);
+  const inp=document.getElementById('rec-inp-'+mid)||document.getElementById('app-inp-'+mid);
   if (inp) inp.focus();
 }
 
-// ─── Match card HTML (5 states) ───────────────────────────────────────────
+// ─── Match card HTML ──────────────────────────────────────────────────────
 function matchHtml(m) {
   const es=ES[m.id], r=m.result;
-
-  const playerRow = `
+  const playerRow=`
     <div class="match-players">
       <div class="mp ${r?.status==='confirmed'&&r.value==='p1'?'won':''}">${esc(m.p1.name)}</div>
       <div class="vs-lbl">vs</div>
       <div class="mp right ${r?.status==='confirmed'&&r.value==='p2'?'won':''}">${esc(m.p2.name)}</div>
     </div>`;
 
-  // State 5 — Confirmed
   if (r?.status==='confirmed') return `
     <div class="match-card confirmed" id="mc-${m.id}">
       ${playerRow}
@@ -467,7 +629,6 @@ function matchHtml(m) {
       </div>
     </div>`;
 
-  // State 4 — Approver name input
   if (r?.status==='pending'&&es?.mode==='approver') return `
     <div class="match-card pending-mc" id="mc-${m.id}">
       ${playerRow}
@@ -482,7 +643,6 @@ function matchHtml(m) {
       </div>
     </div>`;
 
-  // State 3 — Pending approval
   if (r?.status==='pending') return `
     <div class="match-card pending-mc" id="mc-${m.id}">
       ${playerRow}
@@ -494,7 +654,6 @@ function matchHtml(m) {
       </div>
     </div>`;
 
-  // State 2 — Recorder name input
   if (!r&&es?.mode==='recorder') return `
     <div class="match-card recording" id="mc-${m.id}">
       ${playerRow}
@@ -508,7 +667,6 @@ function matchHtml(m) {
       </div>
     </div>`;
 
-  // State 1 — Idle
   return `
     <div class="match-card" id="mc-${m.id}">
       ${playerRow}
@@ -518,6 +676,21 @@ function matchHtml(m) {
         <button class="rbtn" onclick="selectResult(${m.id},'p2')">${esc(m.p2.name)} wins</button>
       </div>
     </div>`;
+}
+
+// ─── Standings ────────────────────────────────────────────────────────────
+function standings() {
+  const map={};
+  S.players.forEach(p=>{map[p.id]={p,played:0,won:0,drawn:0,lost:0,pts:0};});
+  S.matches.forEach(m=>{
+    if (m.result?.status!=='confirmed') return;
+    const a=map[m.p1.id],b=map[m.p2.id]; if(!a||!b) return;
+    a.played++;b.played++;
+    if (m.result.value==='p1')      {a.won++;a.pts+=3;b.lost++;}
+    else if (m.result.value==='p2') {b.won++;b.pts+=3;a.lost++;}
+    else                            {a.drawn++;a.pts++;b.drawn++;b.pts++;}
+  });
+  return Object.values(map).sort((a,b)=>b.pts-a.pts||b.won-a.won||a.lost-b.lost||a.p.name.localeCompare(b.p.name));
 }
 
 // ─── Finance puns ─────────────────────────────────────────────────────────
@@ -544,22 +717,6 @@ const PUNS = [
   "Your annual review performance is watching",
 ];
 
-// ─── Standings (confirmed only) ───────────────────────────────────────────
-function standings() {
-  const map={};
-  S.players.forEach(p=>{ map[p.id]={p,played:0,won:0,drawn:0,lost:0,pts:0}; });
-  S.matches.forEach(m=>{
-    if (m.result?.status!=='confirmed') return;
-    const a=map[m.p1.id], b=map[m.p2.id];
-    if (!a||!b) return;
-    a.played++; b.played++;
-    if (m.result.value==='p1')      { a.won++; a.pts+=3; b.lost++; }
-    else if (m.result.value==='p2') { b.won++; b.pts+=3; a.lost++; }
-    else                            { a.drawn++; a.pts++; b.drawn++; b.pts++; }
-  });
-  return Object.values(map).sort((a,b)=>b.pts-a.pts||b.won-a.won||a.lost-b.lost||a.p.name.localeCompare(b.p.name));
-}
-
 // ─── Render ───────────────────────────────────────────────────────────────
 function renderPlayers() {
   const list=document.getElementById('player-list');
@@ -567,15 +724,15 @@ function renderPlayers() {
   const dur=document.getElementById('during-tourney');
   const info=document.getElementById('tourney-info');
 
-  list.innerHTML = S.players.length===0
-    ? '<div class="empty"><div class="eico">📋</div>Add at least 2 competitors to begin.</div>'
-    : S.players.map((p,i)=>`
-        <div class="player-item">
-          <span><span class="pnum">${i+1}.</span><span class="pname">${esc(p.name)}</span></span>
-          ${!S.started?`<button class="btn btn-danger" style="padding:5px 11px;font-size:.8rem" onclick="removePlayer(${p.id})">Remove</button>`:''}
-        </div>`).join('');
+  list.innerHTML=S.players.length===0
+    ?'<div class="empty"><div class="eico">📋</div>Add at least 2 competitors to begin.</div>'
+    :S.players.map((p,i)=>`
+      <div class="player-item">
+        <span><span class="pnum">${i+1}.</span><span class="pname">${esc(p.name)}</span></span>
+        ${!S.started?`<button class="btn btn-danger" style="padding:5px 11px;font-size:.8rem" onclick="removePlayer(${p.id})">Remove</button>`:''}
+      </div>`).join('');
 
-  if (S.started) { pre.style.display='none'; dur.style.display='block'; }
+  if (S.started){pre.style.display='none';dur.style.display='block';}
   else {
     dur.style.display='none';
     if (S.players.length>=2) {
@@ -594,17 +751,18 @@ function renderMatches() {
   const fill=document.getElementById('prog-fill');
   const lbl=document.getElementById('prog-lbl');
   const chBan=document.getElementById('champion-banner');
+  const filterInfo=document.getElementById('filter-info');
 
-  if (!S.started||S.matches.length===0) { noM.style.display='block'; wrap.style.display='none'; return; }
+  if (!S.started||S.matches.length===0){noM.style.display='block';wrap.style.display='none';return;}
   noM.style.display='none'; wrap.style.display='block';
 
   const confirmed=S.matches.filter(m=>m.result?.status==='confirmed').length;
   const pending=S.matches.filter(m=>m.result?.status==='pending').length;
   const total=S.matches.length;
   fill.style.width=(total?confirmed/total*100:0)+'%';
-  lbl.textContent = pending>0
-    ? `${confirmed} confirmed · ${pending} pending approval · ${total-confirmed-pending} remaining`
-    : `${confirmed} of ${total} matches confirmed`;
+  lbl.textContent=pending>0
+    ?`${confirmed} confirmed · ${pending} pending approval · ${total-confirmed-pending} remaining`
+    :`${confirmed} of ${total} matches confirmed`;
 
   if (confirmed===total&&total>0) {
     const top=standings()[0];
@@ -612,11 +770,28 @@ function renderMatches() {
     chBan.innerHTML=`<div class="alert alert-success">🏆 Championship complete! Finance Champion: ${esc(top.p.name)} (${top.pts} pts)</div>`;
   } else chBan.style.display='none';
 
+  // Apply filter
+  const filtered = applyFilter(S.matches);
+  const isFiltered = filtered.length < S.matches.length;
+
+  if (filterInfo) {
+    if (isFiltered) {
+      filterInfo.style.display='block';
+      filterInfo.innerHTML=`Showing <strong>${filtered.length}</strong> of ${total} fixtures`;
+    } else filterInfo.style.display='none';
+  }
+
+  // Group filtered matches by round
   const rounds={};
-  S.matches.forEach(m=>{ (rounds[m.round]=rounds[m.round]||[]).push(m); });
-  mlist.innerHTML=Object.entries(rounds).map(([r,ms])=>
-    `<div class="round-hdr">Round ${r}</div>`+ms.map(matchHtml).join('')
-  ).join('');
+  filtered.forEach(m=>{(rounds[m.round]=rounds[m.round]||[]).push(m);});
+
+  if (filtered.length===0) {
+    mlist.innerHTML='<div class="empty card"><div class="eico">🔍</div>No fixtures match your search.</div>';
+  } else {
+    mlist.innerHTML=Object.entries(rounds).map(([r,ms])=>
+      `<div class="round-hdr">Round ${r}</div>`+ms.map(matchHtml).join('')
+    ).join('');
+  }
 }
 
 function renderLeaderboard() {
@@ -624,18 +799,18 @@ function renderLeaderboard() {
   const wrap=document.getElementById('lb-wrap');
   const tbody=document.getElementById('lb-body');
   const chBan=document.getElementById('champion-lb-banner');
+  const punEl=document.getElementById('lb-pun');
 
-  if (!S.started) { noLB.style.display='block'; wrap.style.display='none'; return; }
+  if (!S.started){noLB.style.display='block';wrap.style.display='none';return;}
   noLB.style.display='none'; wrap.style.display='block';
 
-  const punEl = document.getElementById('lb-pun');
-  if (punEl) punEl.textContent = '“' + PUNS[Math.floor(Math.random()*PUNS.length)] + '”';
+  if (punEl) punEl.textContent='"'+PUNS[Math.floor(Math.random()*PUNS.length)]+'"';
 
   const rows=standings();
   const medals=['🥇','🥈','🥉'];
   const allConfirmed=S.matches.length>0&&S.matches.every(m=>m.result?.status==='confirmed');
 
-  chBan.style.display = allConfirmed&&rows.length>0?'block':'none';
+  chBan.style.display=allConfirmed&&rows.length>0?'block':'none';
   if (allConfirmed&&rows.length>0)
     chBan.innerHTML=`<div class="alert alert-success">🏆 Finance Champion: ${esc(rows[0].p.name)} · ${rows[0].pts} points</div>`;
 
@@ -659,9 +834,6 @@ function updateBadge() {
 }
 
 function renderAll() { renderPlayers(); renderMatches(); renderLeaderboard(); updateBadge(); }
-
-load(); renderAll();
-document.getElementById('name-input').focus();
 </script>
 </body>
 </html>
