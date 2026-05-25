@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finance Jenga Championship · Prosus</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #080E2A;
+      --surface:   #0F1A45;
+      --card:      #162878;
+      --border:    #243CA8;
+      --teal:      #2AC9BC;
+      --gold:      #D4980C;
+      --text:      #EEF2FF;
+      --text2:     #8AAAD4;
+      --muted:     #3A5888;
+      --win:       #22C55E;
+      --win-bg:    rgba(34,197,94,.12);
+      --win-bdr:   rgba(34,197,94,.4);
+      --draw-c:    #F59E0B;
+      --draw-bg:   rgba(245,158,11,.12);
+      --draw-bdr:  rgba(245,158,11,.4);
+      --loss:      #EF4444;
+      --loss-bg:   rgba(239,68,68,.12);
+      --loss-bdr:  rgba(239,68,68,.4);
+    }
+
+    body { font-family:'Segoe UI',system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+    /* ── Header ── */
+    header {
+      background:#060C24;
+      border-bottom:3px solid var(--teal);
+      padding:0 24px;
+      display:flex; align-items:center; justify-content:space-between;
+      height:64px;
+      box-shadow:0 2px 16px rgba(0,0,0,.5);
+    }
+    .hdr-left { display:flex; align-items:center; gap:12px; }
+    .hdr-icon {
+      width:44px; height:44px; border-radius:10px; overflow:hidden;
+      display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    }
+    .hdr-titles { display:flex; flex-direction:column; gap:1px; }
+    header h1   { font-size:1.15rem; font-weight:700; color:#FFF; letter-spacing:-.2px; }
+    .hdr-sub    { font-size:.7rem; color:var(--text2); letter-spacing:.4px; text-transform:uppercase; }
+    .hdr-tagline{ font-size:.68rem; color:var(--gold); letter-spacing:.3px; font-style:italic; }
+    .hdr-badge  { font-size:.7rem; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:var(--gold); border:1px solid rgba(212,152,12,.5); border-radius:4px; padding:3px 9px; }
+
+    /* ── Nav ── */
+    nav { background:var(--surface); border-bottom:1px solid var(--border); display:flex; padding:0 16px; }
+    .tab-btn { padding:11px 18px; border:none; background:none; cursor:pointer; font-size:.87rem; font-weight:600; color:var(--muted); border-bottom:3px solid transparent; margin-bottom:-1px; transition:color .15s; }
+    .tab-btn:hover { color:var(--text2); }
+    .tab-btn.active { color:var(--teal); border-bottom-color:var(--teal); }
+    .badge { display:inline-block; background:var(--gold); color:#080E2A; border-radius:10px; padding:1px 6px; font-size:.7rem; font-weight:700; margin-left:5px; vertical-align:middle; }
+
+    /* ── Layout ── */
+    main { max-width:780px; margin:0 auto; padding:22px 16px 48px; }
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; }
+
+    /* ── Cards ── */
+    .card { background:var(--card); border-radius:12px; padding:20px; margin-bottom:14px; border:1px solid var(--border); box-shadow:0 2px 8px rgba(0,0,0,.3); }
+    .card-title { font-size:.74rem; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:var(--text2); margin-bottom:14px; }
+
+    /* ── Buttons ── */
+    .btn { padding:9px 16px; border:none; border-radius:8px; cursor:pointer; font-size:.88rem; font-weight:600; transition:filter .15s; }
+    .btn:disabled { opacity:.4; cursor:not-allowed; }
+    .btn:not(:disabled):hover { filter:brightness(1.12); }
+    .btn-primary { background:var(--teal); color:#060C24; }
+    .btn-gold    { background:var(--gold); color:#060C24; }
+    .btn-danger  { background:var(--loss-bg); color:var(--loss); border:1px solid var(--loss-bdr); }
+    .btn-ghost   { background:transparent; border:1px solid var(--border); color:var(--text2); }
+    .btn-ghost:hover { border-color:var(--loss); color:var(--loss); }
+    .btn-sm   { padding:5px 11px; font-size:.8rem; }
+    .btn-block { width:100%; padding:13px; font-size:.95rem; }
+
+    /* ── Form ── */
+    .input-row { display:flex; gap:8px; margin-bottom:14px; }
+    input[type="text"] {
+      flex:1; padding:9px 13px; border:1px solid var(--border); border-radius:8px;
+      font-size:.92rem; color:var(--text); background:var(--surface); transition:border-color .15s;
+    }
+    input[type="text"]::placeholder { color:var(--muted); }
+    input[type="text"]:focus { outline:none; border-color:var(--teal); }
+
+    /* ── Player list ── */
+    .player-list { display:flex; flex-direction:column; gap:7px; }
+    .player-item { display:flex; align-items:center; justify-content:space-between; padding:9px 13px; background:var(--surface); border-radius:8px; border:1px solid var(--border); }
+    .player-item .pnum  { color:var(--muted); font-size:.82rem; margin-right:7px; }
+    .player-item .pname { font-weight:600; }
+
+    /* ── Alerts ── */
+    .alert { padding:11px 14px; border-radius:8px; font-size:.88rem; margin-bottom:12px; }
+    .alert-info    { background:rgba(42,201,188,.1); color:var(--teal); border:1px solid rgba(42,201,188,.35); }
+    .alert-warning { background:rgba(212,152,12,.1); color:#FCD34D; border:1px solid rgba(212,152,12,.35); }
+    .alert-success { background:rgba(212,152,12,.12); color:var(--gold); border:1px solid rgba(212,152,12,.4); font-weight:600; font-size:.95rem; text-align:center; padding:16px; }
+
+    /* ── Progress ── */
+    .progress-track { background:var(--surface); border-radius:6px; height:6px; overflow:hidden; margin-bottom:7px; }
+    .progress-fill  { height:100%; background:var(--teal); border-radius:6px; transition:width .4s; }
+    .progress-lbl   { font-size:.82rem; color:var(--text2); }
+
+    /* ── Round header ── */
+    .round-hdr { font-size:.74rem; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:var(--text2); padding:14px 0 7px; border-bottom:1px solid var(--border); margin-bottom:10px; }
+
+    /* ── Match card ── */
+    .match-card { background:var(--card); border-radius:10px; padding:14px 16px; margin-bottom:9px; border:1px solid var(--border); box-shadow:0 1px 4px rgba(0,0,0,.2); }
+    .match-card.confirmed  { border-left:3px solid var(--teal); }
+    .match-card.pending-mc { border-left:3px solid var(--gold); }
+    .match-card.recording  { border-left:3px solid var(--text2); }
+
+    .match-players { display:flex; align-items:center; gap:10px; margin-bottom:11px; }
+    .mp      { flex:1; font-weight:700; font-size:.97rem; }
+    .mp.right{ text-align:right; }
+    .mp.won  { color:var(--teal); }
+    .vs-lbl  { color:var(--muted); font-weight:600; font-size:.8rem; white-space:nowrap; }
+
+    /* result selection buttons */
+    .result-btns { display:flex; gap:7px; }
+    .rbtn {
+      flex:1; padding:7px 4px; border:1px solid var(--border); border-radius:7px;
+      background:var(--surface); cursor:pointer; font-size:.78rem; font-weight:600;
+      color:var(--text2); text-align:center; transition:all .15s;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .rbtn:hover    { border-color:var(--teal); color:var(--teal); }
+    .rbtn.draw-btn { flex:.65; }
+
+    /* maker-checker states */
+    .result-preview  { font-size:.85rem; font-weight:600; color:var(--text2); margin-bottom:8px; }
+    .result-pending  { font-size:.88rem; font-weight:700; color:var(--gold); margin-bottom:4px; }
+    .result-confirmed-lbl { font-size:.88rem; font-weight:700; color:var(--teal); margin-bottom:6px; }
+    .approval-trail  { font-size:.75rem; color:var(--text2); margin-bottom:8px; display:flex; align-items:center; flex-wrap:wrap; gap:4px; }
+    .reject-lnk      { background:none; border:none; cursor:pointer; font-size:.72rem; color:var(--loss); text-decoration:underline; padding:0; margin-left:4px; }
+    .approve-row     { display:flex; gap:8px; margin-top:2px; }
+    .name-input-row  { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-top:2px; }
+    .input-lbl       { font-size:.78rem; color:var(--text2); white-space:nowrap; }
+    .name-input-row input[type="text"] { flex:1; min-width:130px; padding:6px 10px; font-size:.85rem; }
+
+    /* ── Leaderboard ── */
+    .lb-logo-wrap { text-align:center; padding:8px 0 20px; }
+    .lb-table { width:100%; border-collapse:collapse; }
+    .lb-table th { text-align:left; padding:7px 10px; font-size:.72rem; text-transform:uppercase; letter-spacing:.6px; color:var(--text2); border-bottom:1px solid var(--border); }
+    .lb-table th:not(:nth-child(1)):not(:nth-child(2)) { text-align:center; }
+    .lb-table td { padding:11px 10px; border-bottom:1px solid var(--border); font-size:.93rem; }
+    .lb-table td:not(:nth-child(1)):not(:nth-child(2)) { text-align:center; }
+    .lb-table tr:last-child td { border-bottom:none; }
+    .lb-table tr:hover td { background:rgba(255,255,255,.025); }
+    .rank-cell { font-weight:700; font-size:1rem; width:36px; }
+    .name-cell { font-weight:600; }
+    .pts-cell  { font-weight:700; font-size:1.05rem; color:var(--gold); }
+    .w-cell    { color:var(--win);   font-weight:600; }
+    .d-cell    { color:var(--draw-c);font-weight:600; }
+    .l-cell    { color:var(--loss);  font-weight:600; }
+    .legend    { font-size:.78rem; color:var(--text2); text-align:center; padding:10px; }
+    .lb-pun    { text-align:center; font-style:italic; font-size:.85rem; color:var(--gold); padding:10px 16px 4px; letter-spacing:.2px; }
+
+    /* ── Empty state ── */
+    .empty { text-align:center; padding:36px 20px; color:var(--text2); }
+    .empty .eico { font-size:2.6rem; margin-bottom:10px; opacity:.65; }
+
+    /* ── Footer ── */
+    footer { text-align:center; padding:14px; font-size:.72rem; color:var(--muted); border-top:1px solid var(--border); letter-spacing:.3px; }
+
+    @media(max-width:480px){
+      header h1 { font-size:1rem; }
+      .hdr-badge { display:none; }
+      .tab-btn   { padding:10px 11px; font-size:.8rem; }
+      .rbtn      { font-size:.72rem; padding:6px 3px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-left">
+    <div class="hdr-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="44" height="44">
+        <circle cx="40" cy="40" r="40" fill="#162878"/>
+        <polygon points="40,12 63,25.5 63,52.5 40,66 17,52.5 17,25.5"
+                 fill="none" stroke="#2AC9BC" stroke-width="2.8" stroke-linejoin="round"/>
+        <polygon points="40,18 58.5,28.7 58.5,50 40,60.7 21.5,50 21.5,28.7"
+                 fill="none" stroke="#D4980C" stroke-width="2.2" stroke-linejoin="round"
+                 transform="rotate(20,40,40)"/>
+        <rect x="22" y="48" width="7" height="11" fill="#2AC9BC" rx="1"/>
+        <rect x="32" y="41" width="7" height="18" fill="#2AC9BC" rx="1"/>
+        <rect x="42" y="33" width="7" height="26" fill="#D4980C" rx="1"/>
+        <polygon points="42,33 49,33 45.5,25" fill="#D4980C"/>
+        <circle cx="26" cy="23" r="7" fill="#D4980C"/>
+        <text x="26" y="27.5" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="8.5" font-weight="900" fill="#162878">P</text>
+      </svg>
+    </div>
+    <div class="hdr-titles">
+      <h1>Finance Jenga Championship</h1>
+      <span class="hdr-sub">Prosus Finance Department</span>
+      <span class="hdr-tagline">Powering Growth · Enabling Insight</span>
+    </div>
+  </div>
+  <span class="hdr-badge">Finance Team</span>
+</header>
+
+<nav>
+  <button class="tab-btn active" onclick="showTab('players',this)">Competitors</button>
+  <button class="tab-btn" onclick="showTab('matches',this)">
+    Matches<span class="badge" id="pending-badge" style="display:none">0</span>
+  </button>
+  <button class="tab-btn" onclick="showTab('leaderboard',this)">Leaderboard</button>
+</nav>
+
+<main>
+
+  <!-- ═══ COMPETITORS ═══ -->
+  <div class="tab-panel active" id="panel-players">
+    <div class="card">
+      <div class="card-title">Register Competitors</div>
+      <div class="input-row">
+        <input type="text" id="name-input" placeholder="Enter competitor name…" maxlength="30"
+               onkeydown="if(event.key==='Enter')addPlayer()">
+        <button class="btn btn-primary" onclick="addPlayer()">Add</button>
+      </div>
+      <div class="player-list" id="player-list">
+        <div class="empty"><div class="eico">📋</div>Add at least 2 competitors to begin.</div>
+      </div>
+    </div>
+    <div id="pre-start" style="display:none">
+      <div class="alert alert-info" id="tourney-info"></div>
+      <button class="btn btn-primary btn-block" onclick="startTournament()">🏆 Generate Schedule &amp; Start Championship</button>
+    </div>
+    <div id="during-tourney" style="display:none">
+      <div class="alert alert-warning">Championship in progress — reset to change competitors.</div>
+      <button class="btn btn-ghost" style="margin-top:6px" onclick="resetTournament()">Reset Championship</button>
+    </div>
+  </div>
+
+  <!-- ═══ MATCHES ═══ -->
+  <div class="tab-panel" id="panel-matches">
+    <div class="empty card" id="no-matches">
+      <div class="eico">📅</div>Register competitors and start the championship to see the match schedule.
+    </div>
+    <div id="matches-wrap" style="display:none">
+      <div class="card">
+        <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+        <div class="progress-lbl" id="prog-lbl">0 of 0 matches confirmed</div>
+      </div>
+      <div id="champion-banner" style="display:none"></div>
+      <div id="matches-list"></div>
+    </div>
+  </div>
+
+  <!-- ═══ LEADERBOARD ═══ -->
+  <div class="tab-panel" id="panel-leaderboard">
+    <div class="empty card" id="no-lb">
+      <div class="eico">📊</div>Start the championship to see live standings.
+    </div>
+    <div id="lb-wrap" style="display:none">
+      <div class="lb-logo-wrap">
+        <!-- Prosus Group Finance logo (SVG recreation) -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 238" width="160" height="190" aria-label="Prosus Group Finance">
+          <!-- Navy circle -->
+          <circle cx="100" cy="90" r="80" fill="#162878"/>
+          <!-- Outer teal hexagon (pointy-top, r=56) -->
+          <polygon points="100,34 148.5,62 148.5,118 100,146 51.5,118 51.5,62"
+                   fill="none" stroke="#2AC9BC" stroke-width="3.5" stroke-linejoin="round"/>
+          <!-- Inner gold hexagon (r=46, rotated 20°) -->
+          <polygon points="100,44 139.8,67 139.8,113 100,136 60.2,113 60.2,67"
+                   fill="none" stroke="#D4980C" stroke-width="2.5" stroke-linejoin="round"
+                   transform="rotate(20,100,90)"/>
+          <!-- Bar 1: short teal -->
+          <rect x="68" y="109" width="14" height="21" fill="#2AC9BC" rx="2"/>
+          <!-- Bar 2: medium teal -->
+          <rect x="87" y="94" width="14" height="36" fill="#2AC9BC" rx="2"/>
+          <!-- Bar 3: tall gold with arrow tip -->
+          <rect x="106" y="80" width="14" height="50" fill="#D4980C" rx="2"/>
+          <polygon points="106,80 120,80 113,68" fill="#D4980C"/>
+          <!-- P badge -->
+          <circle cx="74" cy="54" r="12" fill="#D4980C"/>
+          <text x="74" y="59.5" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="13" font-weight="900" fill="#162878">P</text>
+          <!-- PROSUS wordmark -->
+          <text x="100" y="194" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" font-weight="800" fill="#FFFFFF" letter-spacing="4">PROSUS</text>
+          <!-- Gold divider -->
+          <line x1="22" y1="202" x2="178" y2="202" stroke="#D4980C" stroke-width="2"/>
+          <!-- GROUP FINANCE -->
+          <text x="100" y="218" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" font-weight="700" fill="#2AC9BC" letter-spacing="3">GROUP  FINANCE</text>
+          <!-- Tagline -->
+          <text x="100" y="231" text-anchor="middle" font-family="Arial,sans-serif" font-size="7.5" fill="#8AAAD4">Powering Growth · Enabling Insight</text>
+        </svg>
+      </div>
+      <div id="champion-lb-banner" style="display:none"></div>
+      <div class="lb-pun" id="lb-pun"></div>
+      <div class="card">
+        <div class="card-title">Live Standings — Confirmed Results Only</div>
+        <table class="lb-table">
+          <thead>
+            <tr>
+              <th>#</th><th>Competitor</th>
+              <th title="Played">P</th><th title="Wins">W</th>
+              <th title="Draws">D</th><th title="Losses">L</th>
+              <th title="Points">Pts</th>
+            </tr>
+          </thead>
+          <tbody id="lb-body"></tbody>
+        </table>
+      </div>
+      <div class="card legend">
+        P = Played &nbsp;·&nbsp; W = Wins &nbsp;·&nbsp; D = Draws &nbsp;·&nbsp; L = Losses &nbsp;·&nbsp; Pts = Points
+        <br>Win = 3 pts &nbsp;·&nbsp; Draw = 1 pt &nbsp;·&nbsp; Loss = 0 pts
+        <br><span style="color:var(--gold)">Only approved results count toward standings.</span>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>Prosus Finance Department &nbsp;·&nbsp; Jenga Championship<br><span style="color:var(--gold);font-style:italic">Powering Growth · Enabling Insight</span></footer>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────
+let S = { players:[], matches:[], started:false, nextPid:1, nextMid:1 };
+// entryState is in-memory only — tracks which match is mid-entry
+// { [matchId]: { mode:'recorder'|'approver', pendingValue:'p1'|'draw'|'p2' } }
+let ES = {};
+
+function load() { try { const d=localStorage.getItem('jenga-v3'); if(d) S=JSON.parse(d); } catch(_){} }
+function save() { localStorage.setItem('jenga-v3', JSON.stringify(S)); }
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ─── Players ──────────────────────────────────────────────────────────────
+function addPlayer() {
+  if (S.started) return;
+  const inp = document.getElementById('name-input');
+  const name = inp.value.trim();
+  if (!name) return;
+  if (S.players.some(p=>p.name.toLowerCase()===name.toLowerCase())) { alert('Already registered.'); return; }
+  S.players.push({ id:S.nextPid++, name });
+  inp.value=''; inp.focus();
+  save(); renderAll();
+}
+function removePlayer(id) {
+  if (S.started) return;
+  S.players = S.players.filter(p=>p.id!==id);
+  save(); renderAll();
+}
+
+// ─── Round-robin ──────────────────────────────────────────────────────────
+function genRoundRobin(players) {
+  const list = [...players];
+  if (list.length%2!==0) list.push({id:-1,name:'BYE'});
+  const n=list.length, rounds=n-1, half=n/2;
+  const fixed=list[0], rotating=list.slice(1);
+  const matches=[]; let mid=S.nextMid;
+  for (let r=0;r<rounds;r++) {
+    const rot=[...rotating];
+    for (let i=0;i<r;i++) rot.unshift(rot.pop());
+    const circle=[fixed,...rot];
+    for (let i=0;i<half;i++) {
+      const p1=circle[i], p2=circle[n-1-i];
+      if (p1.id!==-1&&p2.id!==-1)
+        matches.push({id:mid++,round:r+1,p1:{id:p1.id,name:p1.name},p2:{id:p2.id,name:p2.name},result:null});
+    }
+  }
+  S.nextMid=mid; return matches;
+}
+function startTournament() {
+  if (S.players.length<2) return;
+  S.matches=genRoundRobin(S.players); S.started=true;
+  save(); renderAll();
+}
+function resetTournament() {
+  if (!confirm('Reset the championship? All results will be cleared.')) return;
+  S.matches=[]; S.started=false; ES={};
+  save(); renderAll();
+}
+
+// ─── Maker-checker entry ──────────────────────────────────────────────────
+function selectResult(mid, value) {
+  ES[mid] = { mode:'recorder', pendingValue:value };
+  rerenderCard(mid);
+}
+function cancelRecording(mid) { delete ES[mid]; rerenderCard(mid); }
+
+function submitRecorder(mid) {
+  const inp = document.getElementById('rec-inp-'+mid);
+  const name = inp.value.trim();
+  if (!name) { inp.focus(); return; }
+  const m = S.matches.find(x=>x.id===mid);
+  m.result = { value:ES[mid].pendingValue, status:'pending', recorder:name, approver:null };
+  delete ES[mid];
+  save(); rerenderCard(mid); renderLeaderboard(); updateBadge();
+}
+
+function startApproval(mid) { ES[mid]={mode:'approver'}; rerenderCard(mid); }
+function cancelApproval(mid) { delete ES[mid]; rerenderCard(mid); }
+
+function submitApproval(mid) {
+  const inp = document.getElementById('app-inp-'+mid);
+  const name = inp.value.trim();
+  if (!name) { inp.focus(); return; }
+  const m = S.matches.find(x=>x.id===mid);
+  if (name.toLowerCase()===m.result.recorder.toLowerCase()) {
+    inp.style.borderColor='var(--loss)';
+    inp.value=''; inp.placeholder='Must be a different person!';
+    inp.focus(); return;
+  }
+  m.result.status='confirmed'; m.result.approver=name;
+  delete ES[mid];
+  save(); rerenderCard(mid); renderLeaderboard(); updateBadge();
+}
+
+function rejectResult(mid) {
+  if (!confirm('Reject this result and reset the match?')) return;
+  const m=S.matches.find(x=>x.id===mid);
+  m.result=null; delete ES[mid];
+  save(); rerenderCard(mid); renderLeaderboard(); updateBadge();
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+function resultLabel(m, value) {
+  if (value==='p1') return esc(m.p1.name)+' wins';
+  if (value==='p2') return esc(m.p2.name)+' wins';
+  return 'Draw';
+}
+function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+function rerenderCard(mid) {
+  const old = document.getElementById('mc-'+mid);
+  if (!old) return;
+  const m = S.matches.find(x=>x.id===mid);
+  const tmp = document.createElement('div');
+  tmp.innerHTML = matchHtml(m);
+  old.replaceWith(tmp.firstElementChild);
+  const inp = document.getElementById('rec-inp-'+mid)||document.getElementById('app-inp-'+mid);
+  if (inp) inp.focus();
+}
+
+// ─── Match card HTML (5 states) ───────────────────────────────────────────
+function matchHtml(m) {
+  const es=ES[m.id], r=m.result;
+
+  const playerRow = `
+    <div class="match-players">
+      <div class="mp ${r?.status==='confirmed'&&r.value==='p1'?'won':''}">${esc(m.p1.name)}</div>
+      <div class="vs-lbl">vs</div>
+      <div class="mp right ${r?.status==='confirmed'&&r.value==='p2'?'won':''}">${esc(m.p2.name)}</div>
+    </div>`;
+
+  // State 5 — Confirmed
+  if (r?.status==='confirmed') return `
+    <div class="match-card confirmed" id="mc-${m.id}">
+      ${playerRow}
+      <div class="result-confirmed-lbl">✓ ${resultLabel(m,r.value)}</div>
+      <div class="approval-trail">
+        <span>Recorded: <strong>${esc(r.recorder)}</strong></span>
+        <span style="color:var(--muted)">·</span>
+        <span>Approved: <strong style="color:var(--teal)">${esc(r.approver)}</strong></span>
+        <button class="reject-lnk" onclick="rejectResult(${m.id})">Reject</button>
+      </div>
+    </div>`;
+
+  // State 4 — Approver name input
+  if (r?.status==='pending'&&es?.mode==='approver') return `
+    <div class="match-card pending-mc" id="mc-${m.id}">
+      ${playerRow}
+      <div class="result-pending">⏳ ${resultLabel(m,r.value)}</div>
+      <div class="approval-trail">Recorded by: <strong>${esc(r.recorder)}</strong></div>
+      <div class="name-input-row">
+        <span class="input-lbl">Approver name:</span>
+        <input type="text" id="app-inp-${m.id}" placeholder="Your name…" maxlength="30"
+               onkeydown="if(event.key==='Enter')submitApproval(${m.id})">
+        <button class="btn btn-primary btn-sm" onclick="submitApproval(${m.id})">Confirm Approval</button>
+        <button class="btn btn-ghost btn-sm" onclick="cancelApproval(${m.id})">Cancel</button>
+      </div>
+    </div>`;
+
+  // State 3 — Pending approval
+  if (r?.status==='pending') return `
+    <div class="match-card pending-mc" id="mc-${m.id}">
+      ${playerRow}
+      <div class="result-pending">⏳ ${resultLabel(m,r.value)} — awaiting approval</div>
+      <div class="approval-trail">Recorded by: <strong>${esc(r.recorder)}</strong></div>
+      <div class="approve-row">
+        <button class="btn btn-gold btn-sm" onclick="startApproval(${m.id})">Approve</button>
+        <button class="btn btn-ghost btn-sm" onclick="rejectResult(${m.id})">Reject</button>
+      </div>
+    </div>`;
+
+  // State 2 — Recorder name input
+  if (!r&&es?.mode==='recorder') return `
+    <div class="match-card recording" id="mc-${m.id}">
+      ${playerRow}
+      <div class="result-preview">→ ${resultLabel(m,es.pendingValue)}</div>
+      <div class="name-input-row">
+        <span class="input-lbl">Recorded by:</span>
+        <input type="text" id="rec-inp-${m.id}" placeholder="Your name…" maxlength="30"
+               onkeydown="if(event.key==='Enter')submitRecorder(${m.id})">
+        <button class="btn btn-primary btn-sm" onclick="submitRecorder(${m.id})">Submit</button>
+        <button class="btn btn-ghost btn-sm" onclick="cancelRecording(${m.id})">Cancel</button>
+      </div>
+    </div>`;
+
+  // State 1 — Idle
+  return `
+    <div class="match-card" id="mc-${m.id}">
+      ${playerRow}
+      <div class="result-btns">
+        <button class="rbtn" onclick="selectResult(${m.id},'p1')">${esc(m.p1.name)} wins</button>
+        <button class="rbtn draw-btn" onclick="selectResult(${m.id},'draw')">Draw</button>
+        <button class="rbtn" onclick="selectResult(${m.id},'p2')">${esc(m.p2.name)} wins</button>
+      </div>
+    </div>`;
+}
+
+// ─── Finance puns ─────────────────────────────────────────────────────────
+const PUNS = [
+  "Balancing the books… and the blocks",
+  "The only leverage ratio that matters today",
+  "Risk management at its most physical",
+  "Where your portfolio is only as stable as the tower",
+  "Maximising returns on every pull",
+  "The market's volatile, but so is this tower",
+  "Structured finance, unstructured towers",
+  "Steady hands outperform the index",
+  "No hedging here — just pulling",
+  "Past performance is no guarantee of future stability",
+  "Diversify your pulling strategy",
+  "This is what compound risk really looks like",
+  "Where liquidity risk becomes very real",
+  "Capital at risk — quite literally",
+  "When the tower falls, it's an impairment charge",
+  "The CFO didn't approve this risk profile",
+  "Too big to fall? Think again",
+  "Block by block — just like building the balance sheet",
+  "The most volatile asset in the room",
+  "Your annual review performance is watching",
+];
+
+// ─── Standings (confirmed only) ───────────────────────────────────────────
+function standings() {
+  const map={};
+  S.players.forEach(p=>{ map[p.id]={p,played:0,won:0,drawn:0,lost:0,pts:0}; });
+  S.matches.forEach(m=>{
+    if (m.result?.status!=='confirmed') return;
+    const a=map[m.p1.id], b=map[m.p2.id];
+    if (!a||!b) return;
+    a.played++; b.played++;
+    if (m.result.value==='p1')      { a.won++; a.pts+=3; b.lost++; }
+    else if (m.result.value==='p2') { b.won++; b.pts+=3; a.lost++; }
+    else                            { a.drawn++; a.pts++; b.drawn++; b.pts++; }
+  });
+  return Object.values(map).sort((a,b)=>b.pts-a.pts||b.won-a.won||a.lost-b.lost||a.p.name.localeCompare(b.p.name));
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────
+function renderPlayers() {
+  const list=document.getElementById('player-list');
+  const pre=document.getElementById('pre-start');
+  const dur=document.getElementById('during-tourney');
+  const info=document.getElementById('tourney-info');
+
+  list.innerHTML = S.players.length===0
+    ? '<div class="empty"><div class="eico">📋</div>Add at least 2 competitors to begin.</div>'
+    : S.players.map((p,i)=>`
+        <div class="player-item">
+          <span><span class="pnum">${i+1}.</span><span class="pname">${esc(p.name)}</span></span>
+          ${!S.started?`<button class="btn btn-danger" style="padding:5px 11px;font-size:.8rem" onclick="removePlayer(${p.id})">Remove</button>`:''}
+        </div>`).join('');
+
+  if (S.started) { pre.style.display='none'; dur.style.display='block'; }
+  else {
+    dur.style.display='none';
+    if (S.players.length>=2) {
+      const total=S.players.length*(S.players.length-1)/2;
+      const rounds=S.players.length%2===0?S.players.length-1:S.players.length;
+      info.textContent=`${S.players.length} competitors · ${total} matches · ${rounds} rounds`;
+      pre.style.display='block';
+    } else pre.style.display='none';
+  }
+}
+
+function renderMatches() {
+  const noM=document.getElementById('no-matches');
+  const wrap=document.getElementById('matches-wrap');
+  const mlist=document.getElementById('matches-list');
+  const fill=document.getElementById('prog-fill');
+  const lbl=document.getElementById('prog-lbl');
+  const chBan=document.getElementById('champion-banner');
+
+  if (!S.started||S.matches.length===0) { noM.style.display='block'; wrap.style.display='none'; return; }
+  noM.style.display='none'; wrap.style.display='block';
+
+  const confirmed=S.matches.filter(m=>m.result?.status==='confirmed').length;
+  const pending=S.matches.filter(m=>m.result?.status==='pending').length;
+  const total=S.matches.length;
+  fill.style.width=(total?confirmed/total*100:0)+'%';
+  lbl.textContent = pending>0
+    ? `${confirmed} confirmed · ${pending} pending approval · ${total-confirmed-pending} remaining`
+    : `${confirmed} of ${total} matches confirmed`;
+
+  if (confirmed===total&&total>0) {
+    const top=standings()[0];
+    chBan.style.display='block';
+    chBan.innerHTML=`<div class="alert alert-success">🏆 Championship complete! Finance Champion: ${esc(top.p.name)} (${top.pts} pts)</div>`;
+  } else chBan.style.display='none';
+
+  const rounds={};
+  S.matches.forEach(m=>{ (rounds[m.round]=rounds[m.round]||[]).push(m); });
+  mlist.innerHTML=Object.entries(rounds).map(([r,ms])=>
+    `<div class="round-hdr">Round ${r}</div>`+ms.map(matchHtml).join('')
+  ).join('');
+}
+
+function renderLeaderboard() {
+  const noLB=document.getElementById('no-lb');
+  const wrap=document.getElementById('lb-wrap');
+  const tbody=document.getElementById('lb-body');
+  const chBan=document.getElementById('champion-lb-banner');
+
+  if (!S.started) { noLB.style.display='block'; wrap.style.display='none'; return; }
+  noLB.style.display='none'; wrap.style.display='block';
+
+  const punEl = document.getElementById('lb-pun');
+  if (punEl) punEl.textContent = '“' + PUNS[Math.floor(Math.random()*PUNS.length)] + '”';
+
+  const rows=standings();
+  const medals=['🥇','🥈','🥉'];
+  const allConfirmed=S.matches.length>0&&S.matches.every(m=>m.result?.status==='confirmed');
+
+  chBan.style.display = allConfirmed&&rows.length>0?'block':'none';
+  if (allConfirmed&&rows.length>0)
+    chBan.innerHTML=`<div class="alert alert-success">🏆 Finance Champion: ${esc(rows[0].p.name)} · ${rows[0].pts} points</div>`;
+
+  tbody.innerHTML=rows.map((r,i)=>`
+    <tr>
+      <td class="rank-cell">${medals[i]??(i+1)}</td>
+      <td class="name-cell">${esc(r.p.name)}</td>
+      <td>${r.played}</td>
+      <td class="w-cell">${r.won}</td>
+      <td class="d-cell">${r.drawn}</td>
+      <td class="l-cell">${r.lost}</td>
+      <td class="pts-cell">${r.pts}</td>
+    </tr>`).join('');
+}
+
+function updateBadge() {
+  const badge=document.getElementById('pending-badge');
+  const n=S.started?S.matches.filter(m=>m.result?.status!=='confirmed').length:0;
+  badge.style.display=n>0?'inline-block':'none';
+  badge.textContent=n;
+}
+
+function renderAll() { renderPlayers(); renderMatches(); renderLeaderboard(); updateBadge(); }
+
+load(); renderAll();
+document.getElementById('name-input').focus();
+</script>
+</body>
+</html>
